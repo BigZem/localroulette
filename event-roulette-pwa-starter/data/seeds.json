@@ -1,0 +1,12 @@
+[
+  {
+    "id": "seed_demo",
+    "name": "Albert Park",
+    "lat": 54.5706,
+    "lon": -1.229,
+    "city": "Middlesbrough",
+    "category": "outdoors",
+    "price_band": "\u00a3",
+    "source_url": "https://maps.google.com/?q=Albert+Park+Middlesbrough"
+  }
+]
