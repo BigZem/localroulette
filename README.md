@@ -21,10 +21,11 @@ npm run test
 npm run typecheck
 npm run lint
 npm run build
+npm run smoke
 npm run content:audit
 ```
 
-GitHub Actions runs the tests, TypeScript check, lint and production build on the working branch. A successful build does not prove phone or live-provider behaviour.
+GitHub Actions runs the tests, TypeScript check, lint, production build and a local runtime smoke check on the working branch. A successful build does not prove phone or live-provider behaviour.
 
 ## Discovery and data quality
 
