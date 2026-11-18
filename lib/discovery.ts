@@ -13,6 +13,7 @@ export async function discover(filters: Filters): Promise<DiscoveryResult> {
   const [lat, lon] = await resolveLocation(filters);
   let items: Activity[] = filters.demo ? [...demoActivities] : [...curatedActivities];
   const warnings: string[] = [];
+  if (filters.demo) warnings.push('Demonstration ideas are examples. Their opening times and dates are not verified, so check details before going.');
   if (!filters.demo) {
     const providers: Array<Promise<Activity[]>> = [searchOsm(lat, lon, filters.radius)];
     const key = process.env.TICKETMASTER_API_KEY;
