@@ -47,6 +47,14 @@ test('reviewed places have sources and the museum last-admission cutoff is honou
   assert.equal(eligible([museum], filters, new Date('2026-11-19T15:00:00Z')).length, 1);
   assert.equal(eligible([museum], filters, new Date('2026-11-19T15:45:00Z')).length, 0);
 });
+test('family activity search includes child-suitable venues across categories', () => {
+  const filters = { ...DEFAULT_FILTERS, category: 'family' as const };
+  const atSix = new Date('2026-11-19T18:00:00Z');
+  const matches = eligible(curatedActivities, filters, atSix);
+  assert.ok(matches.some(item => item.id === 'curated-hollywood-bowl-stockton'));
+  assert.ok(matches.some(item => item.id === 'curated-billingham-forum'));
+  assert.ok(!matches.some(item => item.id === 'curated-rockantics'));
+});
 test('distance and duplicate checks use coordinates', () => {
   assert.ok(distanceMiles(54.574, -1.235, 54.68, -1.21) > 5);
   assert.equal(dedupe([place, { ...place, id: 'osm-node-2', name: 'Test Place!', lat: 54.5741 }]).length, 1);

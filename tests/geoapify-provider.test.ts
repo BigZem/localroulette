@@ -53,6 +53,7 @@ test('configured live search and share links use Geoapify on the server', async 
     assert.equal((await getActivity('geo-food-fixture_02'))?.id, 'geo-food-fixture_02');
     assert.ok(calls.some(url => url.includes('/places?')));
     assert.ok(calls.some(url => url.includes('/place-details?')));
+    assert.ok(calls.some(url => url.includes('conditions=named')));
     assert.ok(calls.every(url => url.includes('apiKey=fixture-secret')));
   } finally {
     globalThis.fetch = originalFetch;

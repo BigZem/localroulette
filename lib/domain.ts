@@ -124,7 +124,8 @@ function matchesBudget(activity: Activity, budget: Filters['budget']): boolean {
 
 export function eligible(items: Activity[], filters: Filters, now = new Date()): Activity[] {
   return items.filter(item => item.demo === filters.demo && (item.distanceMiles === undefined || item.distanceMiles <= filters.radius)
-    && (filters.category === 'surprise' || item.category === filters.category)
+    && (filters.category === 'surprise' || item.category === filters.category
+      || (filters.category === 'family' && item.audiences.includes('family')))
     && item.audiences.includes(filters.audience) && matchesBudget(item, filters.budget) && matchesTime(item, filters, now));
 }
 

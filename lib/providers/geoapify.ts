@@ -76,7 +76,7 @@ export async function searchGeoapify(lat: number, lon: number, miles: number, ca
   if (startAt > Date.now()) await new Promise(resolve => setTimeout(resolve, startAt - Date.now()));
   const radius = Math.round(miles * 1609.344);
   const limit = miles > 10 || category === 'surprise' ? 200 : LOCAL_LIMITS[category];
-  const params = new URLSearchParams({ categories: geoapifyCategories(category), filter: `circle:${lon},${lat},${radius}`,
+  const params = new URLSearchParams({ categories: geoapifyCategories(category), conditions: 'named', filter: `circle:${lon},${lat},${radius}`,
     bias: `proximity:${lon},${lat}`, limit: String(limit), apiKey });
   const response = await timedFetch(`https://api.geoapify.com/v2/places?${params}`, {}, 9000);
   if (!response.ok) throw new Error(response.status === 429 ? 'Geoapify rate limit reached.' : 'Geoapify places are temporarily unavailable.');
