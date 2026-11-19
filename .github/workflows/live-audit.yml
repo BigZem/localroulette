@@ -2,7 +2,10 @@ name: Audit live Teesside discovery
 on:
   push:
     branches: [codex/localroulette-mvp]
-    paths: [.github/workflows/live-audit.yml]
+    paths:
+      - .github/workflows/live-audit.yml
+      - lib/providers/osm.ts
+      - scripts/live-audit.mjs
   workflow_dispatch:
 jobs:
   audit:
