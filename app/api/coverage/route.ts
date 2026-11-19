@@ -7,8 +7,8 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request): Promise<NextResponse> {
   const category = new URL(request.url).searchParams.get('category') ?? 'food';
-  if (category !== 'food' && category !== 'outdoor')
-    return NextResponse.json({ error: 'Choose food or outdoor.' }, { status: 400 });
+  if (category !== 'food' && category !== 'outdoor' && category !== 'surprise')
+    return NextResponse.json({ error: 'Choose food, outdoor or surprise.' }, { status: 400 });
   try {
     const result = await discover({ ...DEFAULT_FILTERS, location: 'Middlesbrough', radius: 10,
       budget: 'any', audience: 'friends', when: 'today', category, demo: false });

@@ -5,7 +5,7 @@ console.log('Live content audit — Middlesbrough, 10 miles, today, friends, any
 console.log('Counts are request-time matches among up to 250 provider records per category; they are not stored database totals.');
 console.log(`Place provider: ${process.env.GEOAPIFY_API_KEY ? 'Geoapify' : process.env.ENABLE_PUBLIC_OVERPASS === 'true' ? 'public Overpass (diagnostic)' : 'none configured'}`);
 
-for (const category of ['food', 'outdoor']) {
+for (const category of ['food', 'outdoor', 'surprise']) {
   const result = await discover({ ...DEFAULT_FILTERS, category, demo: false });
   const providerFailed = result.warnings.some(warning => /^(Geoapify|OpenStreetMap|Live place search)/.test(warning));
   console.log(providerFailed ? `${category}: provider unavailable` : `${category}: ${result.count} eligible places`);

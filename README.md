@@ -39,9 +39,9 @@ GitHub Actions runs the tests, TypeScript check, lint, production build and a lo
 Providers return a common Activity model. Search applies location, radius, budget, audience, category and date filters, then deduplicates results. Unknown prices are excluded from strict budget filters; places without parseable hours are excluded from time filters. Provider calls use timeouts, small in-memory caches and basic per-instance rate protection. For larger traffic, add a shared cache, global quotas and provider agreements.
 
 `npm run content:audit` reports stored content counts. Live Geoapify and Ticketmaster results are fetched per request and **not stored in a database**, so there is no fixed live-content count.
-`npm run content:live-audit` checks two current Middlesbrough categories through the configured place provider. Its numbers vary with provider availability and are not a total inventory. The separate GitHub Actions live-audit workflow can rerun this check manually; to use Geoapify there, add a repository Actions secret named `GEOAPIFY_API_KEY`.
+`npm run content:live-audit` checks food, outdoor and the default surprise search around Middlesbrough through the configured place provider. Its numbers vary with provider availability and are not a total inventory. The separate GitHub Actions live-audit workflow can rerun this check manually; to use Geoapify there, add a repository Actions secret named `GEOAPIFY_API_KEY`.
 For a local audit with the key in `.env.local`, run `node --env-file=.env.local scripts/live-audit.mjs`. Next.js loads `.env.local` for the app, but a standalone Node script does not.
-`/api/coverage?category=food` and `?category=outdoor` are bounded, cached checks for current matching Middlesbrough places. A provider failure returns `eligibleCount: null`, not a misleading zero.
+`/api/coverage?category=food`, `?category=outdoor` and `?category=surprise` are bounded, cached checks for current matching Middlesbrough places. The surprise query reflects the default category and a limited provider sample, not a total inventory. A provider failure returns `eligibleCount: null`, not a misleading zero.
 
 ## Free tier and future income
 
