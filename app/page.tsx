@@ -7,13 +7,15 @@ import { FiltersPanel } from '@/components/Filters';
 import { Wheel, WHEEL_PLACEHOLDERS } from '@/components/Wheel';
 import { shareActivity, useFavorites } from '@/components/use-favorites';
 import { parseFilters } from '@/lib/domain.ts';
+import { FILTER_KEY, loadSavedFilters } from '@/lib/filters-storage.ts';
+import { normaliseHistory, pickActivity, rememberPick } from '@/lib/history.ts';
 import { directionsUrl, priceLabel, safeExternal, whenLabel } from '@/lib/presentation.ts';
 import { spinsLeft, takeSpin, type SpinRecord } from '@/lib/spins.ts';
-import { randomIndex, wheelPool, wheelStop, WHEEL_SEGMENTS } from '@/lib/wheel.ts';
+import { wheelPool, wheelStop, WHEEL_SEGMENTS } from '@/lib/wheel.ts';
 import { DEFAULT_FILTERS, type Activity, type Filters } from '@/lib/types.ts';
 import type { DiscoveryResult } from '@/lib/discovery.ts';
 
-const FILTER_KEY = 'localroulette:filters', SPIN_KEY = 'localroulette:spins', SEEN_KEY = 'localroulette:seen';
+const SPIN_KEY = 'localroulette:spins', HISTORY_KEY = 'localroulette:history', LEGACY_SEEN_KEY = 'localroulette:seen';
 function random(): number { const value = new Uint32Array(1); crypto.getRandomValues(value); return (value[0] ?? 0) / 4294967296; }
 function playTone(muted: boolean) {
   if (muted) return;
@@ -34,6 +36,7 @@ export default function Home() {
   const [rotation, setRotation] = useState(0), rotationRef = useRef(0);
   const [labels, setLabels] = useState(WHEEL_PLACEHOLDERS);
   const [matchCount, setMatchCount] = useState<number | null>(null);
+  const [historyCount, setHistoryCount] = useState(0), historyRef = useRef<string[]>([]);
   const [result, setResult] = useState<Activity | null>(null);
   const [message, setMessage] = useState(''), [warnings, setWarnings] = useState<string[]>([]);
   const [muted, setMuted] = useState(true), [reduced, setReduced] = useState(false);
@@ -42,7 +45,10 @@ export default function Home() {
   const { toggle, isSaved } = useFavorites();
 
   useEffect(() => {
-    try { setFilters({ ...DEFAULT_FILTERS, ...(JSON.parse(localStorage.getItem(FILTER_KEY) || '{}') as Partial<Filters>) }); } catch { /* Use defaults. */ }
+    setFilters(loadSavedFilters(localStorage));
+    try { historyRef.current = normaliseHistory(JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]') as unknown); } catch { /* New history. */ }
+    try { historyRef.current = normaliseHistory([...historyRef.current, ...(JSON.parse(sessionStorage.getItem(LEGACY_SEEN_KEY) || '[]') as string[])]); } catch { /* No legacy picks. */ }
+    setHistoryCount(historyRef.current.length);
     try { setRecord(JSON.parse(localStorage.getItem(SPIN_KEY) || 'null') as SpinRecord | null); } catch { /* Use default. */ }
     try { setMuted(JSON.parse(localStorage.getItem('localroulette:muted') || 'true') as boolean); } catch { /* Sound off. */ }
     setReduced(window.matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -71,14 +77,11 @@ export default function Home() {
           : 'No matching activities. Try a wider radius, any budget, another time, or labelled demo ideas.');
         return;
       }
-      let seen: string[] = [];
-      try { seen = JSON.parse(sessionStorage.getItem(SEEN_KEY) || '[]') as string[]; } catch { /* New session. */ }
-      let fresh = data.activities.filter(item => !seen.includes(item.id));
-      if (!fresh.length) { seen = []; fresh = data.activities; }
-      const chosen = fresh[randomIndex(fresh.length, random)]!;
+      const chosen = pickActivity(data.activities, historyRef.current, random);
       const next = takeSpin(record);
       if (!next) return;
-      setRecord(next); try { localStorage.setItem(SPIN_KEY, JSON.stringify(next)); sessionStorage.setItem(SEEN_KEY, JSON.stringify([...seen, chosen.id])); } catch { /* Storage optional. */ }
+      historyRef.current = rememberPick(historyRef.current, chosen.id); setHistoryCount(historyRef.current.length);
+      setRecord(next); try { localStorage.setItem(SPIN_KEY, JSON.stringify(next)); localStorage.setItem(HISTORY_KEY, JSON.stringify(historyRef.current)); } catch { /* Storage optional. */ }
       const pool = wheelPool(data.activities, chosen, random);
       const index = pool.findIndex(item => item.id === chosen.id);
       const target = wheelStop(rotationRef.current, index, pool.length);
@@ -101,7 +104,7 @@ export default function Home() {
       <FiltersPanel filters={filters} onChange={setFilters} onMessage={setMessage}/>
     </div><div className="hero-play" ref={wheelRef}><div className="orbit-note">YOUR NEXT<br/>ADVENTURE</div><Wheel labels={labels} rotation={rotation} spinning={spinning} reducedMotion={reduced}/>
       <div className="spin-box"><span className="eyebrow">02 / LET FATE DECIDE</span><h2>Ready? Give it a spin.</h2><p>We match your choices first. The wheel selects fairly from eligible results.</p>
-        <div className="wheel-pool-note" aria-live="polite"><strong>{matchCount === null ? '12 vivid slices' : `${matchCount} matching ${matchCount === 1 ? 'idea' : 'ideas'}`}</strong><span>{matchCount === null ? 'Real names appear when you spin.' : `A random set of up to ${WHEEL_SEGMENTS} appears on the wheel.`}</span></div>
+        <div className="wheel-pool-note" aria-live="polite"><strong>{matchCount === null ? '12 vivid slices' : `${matchCount} matching ${matchCount === 1 ? 'idea' : 'ideas'}`}</strong><span>{matchCount === null ? 'Real names appear when you spin.' : `Up to ${WHEEL_SEGMENTS} appear on the wheel; ${historyCount} recent picks remembered on this device.`}</span></div>
         <button className="spin-button" type="button" onClick={() => void spin()} disabled={busy || spinning}>{busy ? 'FINDING IDEAS…' : spinning ? 'SPINNING…' : '✦ SPIN THE WHEEL'} <span aria-hidden="true">↗</span></button>
         <div className="spin-meta"><span>{remaining} of 3 free spins left today</span><button type="button" onClick={() => { setMuted(!muted); try { localStorage.setItem('localroulette:muted', JSON.stringify(!muted)); } catch { /* Optional. */ } }} aria-label={muted ? 'Turn sound on' : 'Turn sound off'}>{muted ? '♪ Sound off' : '♫ Sound on'}</button></div>
         <small>Resets at UK midnight. Browser limits can be reset or bypassed.</small>{installPrompt && <button type="button" className="install-button" onClick={() => { void installPrompt.prompt(); setInstallPrompt(null); }}>Install LocalRoulette ↗</button>}

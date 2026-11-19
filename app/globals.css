@@ -18,6 +18,8 @@
 .time-shortcuts button:hover{transform:translateY(-2px);border-color:#7aa3b6}
 .time-shortcuts button.active{background:#1c666b;color:#fff;border-color:#50dec9;box-shadow:0 0 0 2px #39d7c527}
 .time-shortcuts button:focus-visible{outline:3px solid #fff;outline-offset:3px}
+.filter-help{margin:10px 0 0;color:#b8c8df;font-size:.72rem;line-height:1.45}
+.more-results{display:flex;align-items:center;justify-content:center;gap:18px;flex-wrap:wrap;margin:30px auto 0;color:var(--muted);font-size:.83rem}
 .wheel-disc:after{background:repeating-conic-gradient(#ffffff86 0deg 1deg,transparent 1deg var(--segment-angle))}
 .wheel-frame{box-shadow:0 0 0 2px #8590c2,0 0 0 10px #101a32,0 0 0 13px #293456,0 20px 42px #000a,inset 0 0 20px #0008}
 .wheel-label{width:19%;font-size:clamp(.52rem,.88vw,.72rem);overflow-wrap:anywhere;text-shadow:0 1px 1px #ffffff55}

@@ -13,19 +13,24 @@ interface GeoFeature {
 }
 
 const CATEGORY_KEYS: Record<PlaceCategory, string[]> = {
-  food: ['catering.restaurant', 'catering.cafe', 'catering.fast_food'],
-  nightlife: ['catering.pub', 'catering.bar'],
-  entertainment: ['entertainment.cinema', 'entertainment.culture.theatre', 'entertainment.culture.arts_centre', 'entertainment.bowling_alley', 'entertainment.escape_game'],
-  culture: ['entertainment.museum', 'entertainment.culture.gallery'],
-  outdoor: ['leisure.park'],
-  family: ['leisure.playground', 'entertainment.zoo', 'entertainment.aquarium', 'entertainment.theme_park'],
-  sport: ['sport.sports_centre', 'sport.fitness', 'sport.swimming_pool'],
-  hidden: ['tourism.attraction.viewpoint', 'tourism.sights.castle', 'tourism.sights.ruines'],
+  food: ['catering.restaurant', 'catering.cafe', 'catering.fast_food', 'catering.food_court', 'catering.ice_cream'],
+  nightlife: ['catering.pub', 'catering.bar', 'catering.taproom', 'catering.biergarten'],
+  entertainment: ['entertainment.cinema', 'entertainment.culture.theatre', 'entertainment.bowling_alley', 'entertainment.escape_game',
+    'entertainment.amusement_arcade', 'entertainment.miniature_golf', 'entertainment.activity_park', 'entertainment.planetarium'],
+  culture: ['entertainment.museum', 'entertainment.culture.gallery', 'entertainment.culture.arts_centre'],
+  outdoor: ['leisure.park', 'leisure.picnic.picnic_site', 'natural.coastal', 'natural.forest', 'natural.protected_area', 'natural.sand', 'natural.mountain.hill'],
+  family: ['leisure.playground', 'entertainment.zoo', 'entertainment.aquarium', 'entertainment.theme_park', 'entertainment.water_park'],
+  sport: ['sport.sports_centre', 'sport.sports_hall', 'sport.fitness', 'sport.swimming_pool', 'sport.ice_rink', 'sport.golf_course',
+    'sport.horse_riding', 'sport.dojo', 'sport.skateboard'],
+  hidden: ['tourism.attraction.viewpoint', 'tourism.attraction.artwork', 'tourism.sights.castle', 'tourism.sights.ruines',
+    'tourism.sights.lighthouse', 'tourism.sights.fort', 'tourism.sights.archaeological_site', 'tourism.sights.memorial.monument'],
 };
 const CATEGORY_ORDER: PlaceCategory[] = ['family', 'food', 'nightlife', 'culture', 'entertainment', 'outdoor', 'sport', 'hidden'];
-const LOCAL_LIMITS: Record<PlaceCategory, number> = { food: 150, outdoor: 50, nightlife: 80,
-  entertainment: 50, culture: 50, sport: 50, family: 50, hidden: 50 };
+const LOCAL_LIMITS: Record<PlaceCategory, number> = { food: 150, outdoor: 100, nightlife: 100,
+  entertainment: 100, culture: 80, sport: 100, family: 80, hidden: 100 };
 let nextCall = 0;
+
+function isGroup(value: CategoryChoice | readonly PlaceCategory[]): value is readonly PlaceCategory[] { return Array.isArray(value); }
 
 function safeHttps(value: unknown): string | undefined {
   if (typeof value !== 'string') return undefined;
@@ -35,8 +40,9 @@ function safeHttps(value: unknown): string | undefined {
 function matches(categories: string[], category: PlaceCategory): boolean {
   return CATEGORY_KEYS[category].some(prefix => categories.some(value => value === prefix || value.startsWith(`${prefix}.`)));
 }
-export function geoapifyCategories(category: Exclude<CategoryChoice, 'events'>): string {
-  return (category === 'surprise' ? CATEGORY_ORDER.flatMap(value => CATEGORY_KEYS[value]) : CATEGORY_KEYS[category]).join(',');
+export function geoapifyCategories(category: Exclude<CategoryChoice, 'events'> | readonly PlaceCategory[]): string {
+  const choices = isGroup(category) ? category : category === 'surprise' ? CATEGORY_ORDER : [category];
+  return [...new Set(choices.flatMap(value => CATEGORY_KEYS[value]))].join(',');
 }
 
 export function normaliseGeoapify(feature: GeoFeature, selected: CategoryChoice = 'surprise'): Activity | null {
@@ -66,22 +72,24 @@ export function normaliseGeoapify(feature: GeoFeature, selected: CategoryChoice 
   };
 }
 
-export async function searchGeoapify(lat: number, lon: number, miles: number, category: CategoryChoice, apiKey: string): Promise<Activity[]> {
+export async function searchGeoapify(lat: number, lon: number, miles: number, category: CategoryChoice | readonly PlaceCategory[], apiKey: string): Promise<Activity[]> {
   if (category === 'events') return [];
-  const key = `geoapify:${lat.toFixed(4)}:${lon.toFixed(4)}:${miles}:${category}`;
+  const group = isGroup(category);
+  const scope = group ? category.join('+') : category;
+  const key = `geoapify:${lat.toFixed(4)}:${lon.toFixed(4)}:${miles}:${scope}`;
   const hit = cached<Activity[]>(key);
   if (hit) return hit;
   const startAt = Math.max(Date.now(), nextCall);
   nextCall = startAt + 1000;
   if (startAt > Date.now()) await new Promise(resolve => setTimeout(resolve, startAt - Date.now()));
   const radius = Math.round(miles * 1609.344);
-  const limit = miles > 10 || category === 'surprise' ? 200 : LOCAL_LIMITS[category];
+  const limit = group || miles > 10 || category === 'surprise' ? 200 : LOCAL_LIMITS[category];
   const params = new URLSearchParams({ categories: geoapifyCategories(category), conditions: 'named', filter: `circle:${lon},${lat},${radius}`,
     bias: `proximity:${lon},${lat}`, limit: String(limit), apiKey });
   const response = await timedFetch(`https://api.geoapify.com/v2/places?${params}`, {}, 9000);
   if (!response.ok) throw new Error(response.status === 429 ? 'Geoapify rate limit reached.' : 'Geoapify places are temporarily unavailable.');
   const data = await response.json() as { features?: GeoFeature[] };
-  const items = (Array.isArray(data.features) ? data.features : []).map(feature => normaliseGeoapify(feature, category)).filter((item): item is Activity => item !== null);
+  const items = (Array.isArray(data.features) ? data.features : []).map(feature => normaliseGeoapify(feature, group ? 'surprise' : category)).filter((item): item is Activity => item !== null);
   return remember(key, items, 20 * 60000);
 }
 

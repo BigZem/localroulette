@@ -82,6 +82,7 @@ function matchesTime(activity: Activity, filters: Filters, now: Date): boolean {
     const end = activity.endsAt ? new Date(activity.endsAt) : null;
     if (!(start > now || (end && end > now))) return false;
     const date = ukDate(start);
+    if (filters.when === 'anytime') return true;
     if (filters.when === 'date') return date === filters.date;
     if (filters.when === 'today') return date === today;
     if (filters.when === 'daytime') return date === today && ukMinutes(now) < 1080 && ukMinutes(start) < 1080;
@@ -93,6 +94,7 @@ function matchesTime(activity: Activity, filters: Filters, now: Date): boolean {
     const sunday = new Date(saturday); sunday.setUTCDate(sunday.getUTCDate() + 1);
     return date === ukDate(saturday) || date === ukDate(sunday);
   }
+  if (filters.when === 'anytime') return true;
   if (!activity.openingHours) return false;
   if (filters.when === 'date' && filters.date) return periodsOnDate(activity.openingHours, filters.date).length > 0;
   if (filters.when === 'weekend') {
@@ -133,10 +135,12 @@ export function eligible(items: Activity[], filters: Filters, now = new Date()):
 
 export function dedupe(items: Activity[]): Activity[] {
   const result: Activity[] = [];
+  const byName = new Map<string, Activity[]>();
   for (const item of items) {
-    const name = item.name.toLocaleLowerCase('en-GB').replace(/[^a-z0-9]/g, '');
-    if (!result.some(existing => existing.name.toLocaleLowerCase('en-GB').replace(/[^a-z0-9]/g, '') === name
-      && distanceMiles(existing.lat, existing.lon, item.lat, item.lon) < 0.1)) result.push(item);
+    const name = item.name.toLocaleLowerCase('en-GB').replace(/^the\s+/, '').replace(/[^a-z0-9]/g, '');
+    const matches = byName.get(name) ?? [];
+    if (matches.some(existing => distanceMiles(existing.lat, existing.lon, item.lat, item.lon) < 0.1)) continue;
+    matches.push(item); byName.set(name, matches); result.push(item);
   }
   return result;
 }

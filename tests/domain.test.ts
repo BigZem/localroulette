@@ -24,7 +24,8 @@ test('unknown prices are excluded from price-specific searches', () => {
 });
 test('time searches require usable hours or an upcoming event', () => {
   const now = new Date('2026-11-18T19:00:00Z');
-  assert.equal(eligible([{ ...place, openingHours: undefined }], DEFAULT_FILTERS, now).length, 0);
+  assert.equal(eligible([{ ...place, openingHours: undefined }], { ...DEFAULT_FILTERS, when: 'today' }, now).length, 0);
+  assert.equal(eligible([{ ...place, openingHours: undefined }], DEFAULT_FILTERS, now).length, 1);
   assert.equal(eligible([{ ...place, openingHours: 'Mo-Fr 09:00-17:00' }], { ...DEFAULT_FILTERS, when: 'now' }, now).length, 0);
   const event: Activity = { ...place, source: 'ticketmaster', category: 'events', startsAt: '2026-11-18T18:00:00Z', openingHours: undefined };
   assert.equal(eligible([event], { ...DEFAULT_FILTERS, category: 'events' }, now).length, 0);
@@ -60,7 +61,7 @@ test('reviewed places have sources and the museum last-admission cutoff is honou
   assert.ok(curatedActivities.filter(item => item.category === 'nightlife').length >= 7);
   assert.ok(directionsUrl(curatedActivities[0]!).includes(encodeURIComponent(curatedActivities[0]!.address!)));
   const museum = curatedActivities.find(item => item.id === 'curated-preston-park-museum')!;
-  const filters = { ...DEFAULT_FILTERS, category: 'family' as const };
+  const filters = { ...DEFAULT_FILTERS, category: 'family' as const, when: 'today' as const };
   assert.equal(eligible([museum], filters, new Date('2026-11-19T15:00:00Z')).length, 1);
   assert.equal(eligible([museum], filters, new Date('2026-11-19T15:45:00Z')).length, 0);
 });
@@ -75,6 +76,7 @@ test('family activity search includes child-suitable venues across categories', 
 test('distance and duplicate checks use coordinates', () => {
   assert.ok(distanceMiles(54.574, -1.235, 54.68, -1.21) > 5);
   assert.equal(dedupe([place, { ...place, id: 'osm-node-2', name: 'Test Place!', lat: 54.5741 }]).length, 1);
+  assert.equal(dedupe([place, { ...place, id: 'osm-node-3', name: 'The Test Place', lat: 54.5741 }]).length, 1);
 });
 test('free spins reset at UK midnight', () => {
   const before = new Date('2026-11-18T23:30:00Z'), after = new Date('2026-11-19T00:30:00Z');

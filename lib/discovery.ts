@@ -8,7 +8,11 @@ import { getOsm, searchOsm } from './providers/osm.ts';
 import { getTicketmaster, searchTicketmaster } from './providers/ticketmaster.ts';
 
 const recent = new Map<string, Activity>();
-export const SURPRISE_PLACE_CATEGORIES = ['food', 'outdoor', 'nightlife'] as const satisfies ReadonlyArray<Exclude<CategoryChoice, 'surprise' | 'events'>>;
+// Four bounded requests protect the free-tier quota while avoiding a single
+// food-heavy response swallowing the more unusual Teesside choices.
+export const SURPRISE_PLACE_GROUPS = [
+  ['food'], ['nightlife'], ['outdoor', 'hidden'], ['entertainment', 'sport', 'culture', 'family'],
+] as const satisfies ReadonlyArray<ReadonlyArray<Exclude<CategoryChoice, 'surprise' | 'events'>>>;
 export interface DiscoveryResult { activities: Activity[]; count: number; demo: boolean; warnings: string[]; searchedFrom: { lat: number; lon: number } }
 
 export async function discover(filters: Filters): Promise<DiscoveryResult> {
@@ -21,7 +25,7 @@ export async function discover(filters: Filters): Promise<DiscoveryResult> {
     if (filters.category !== 'events') {
       const placeKey = process.env.GEOAPIFY_API_KEY?.trim();
       if (placeKey && filters.category === 'surprise')
-        for (const category of SURPRISE_PLACE_CATEGORIES) providers.push(searchGeoapify(lat, lon, filters.radius, category, placeKey));
+        for (const group of SURPRISE_PLACE_GROUPS) providers.push(searchGeoapify(lat, lon, filters.radius, group, placeKey));
       else if (placeKey) providers.push(searchGeoapify(lat, lon, filters.radius, filters.category, placeKey));
       else if (process.env.ENABLE_PUBLIC_OVERPASS === 'true') providers.push(searchOsm(lat, lon, filters.radius, filters.category));
       else warnings.push('Live place search needs a Geoapify API key. Try the clearly labelled demonstration ideas until it is configured.');
@@ -41,7 +45,7 @@ export async function discover(filters: Filters): Promise<DiscoveryResult> {
   items = eligible(items, filters);
   for (const item of items) recent.set(item.id, item);
   if (recent.size > 1000) recent.clear();
-  return { activities: items.slice(0, 250), count: items.length, demo: filters.demo, warnings, searchedFrom: { lat, lon } };
+  return { activities: items, count: items.length, demo: filters.demo, warnings, searchedFrom: { lat, lon } };
 }
 
 export async function getActivity(id: string): Promise<Activity | null> {

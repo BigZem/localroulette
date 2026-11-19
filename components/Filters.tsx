@@ -19,9 +19,11 @@ export function FiltersPanel({ filters, onChange, onMessage, compact = false }: 
   return <form className={`filters-panel ${compact ? 'compact' : ''}`} onSubmit={event => event.preventDefault()}>
     {!compact && <div className="panel-heading"><div><span className="eyebrow">01 / SET THE SCENE</span><h2>Make it yours.</h2></div><span className="mini-star">✦</span></div>}
     <div className="time-shortcuts" role="group" aria-label="Quick time choices"><span>Pick your moment</span>
+      <button type="button" className={filters.when === 'anytime' ? 'active' : ''} aria-pressed={filters.when === 'anytime'} onClick={() => update('when', 'anytime')}>✦ Explore all</button>
       <button type="button" className={filters.when === 'daytime' ? 'active' : ''} aria-pressed={filters.when === 'daytime'} onClick={() => update('when', 'daytime')}>☀ Day out</button>
       <button type="button" className={filters.when === 'tonight' ? 'active' : ''} aria-pressed={filters.when === 'tonight'} onClick={() => update('when', 'tonight')}>☾ Tonight</button>
     </div>
+    {filters.when === 'anytime' && <p className="filter-help">Explore all includes places with unconfirmed opening hours. Check with the venue before setting off.</p>}
     <div className="filter-grid">
       <label className="filter-field location-field"><span>Where?</span><div className="location-entry"><input required maxLength={100} autoComplete="address-level2" placeholder="Town, city or postcode" value={filters.location} onChange={event => onChange(previous => ({ ...previous, location: event.target.value, lat: undefined, lon: undefined }))}/><button type="button" className="location-button" onClick={locate} aria-label="Use my approximate location" title="Use my location">⌾</button></div></label>
       <label className="filter-field"><span>How far?</span><select value={filters.radius} onChange={event => update('radius', Number(event.target.value) as Filters['radius'])}>{RADIUS_CHOICES.map(value => <option key={value} value={value}>{value} miles</option>)}</select></label>
