@@ -38,11 +38,13 @@ export interface Activity {
   pricePence?: number;
   priceNote?: string;
   openingHours?: string;
+  lastAdmissionAt?: string;
   startsAt?: string;
   endsAt?: string;
   audiences: Audience[];
   source: ActivitySource;
   sourceUrl?: string;
+  reviewedOn?: string;
   affiliateUrl?: string;
   affiliateDisclosure?: string;
   distanceMiles?: number;

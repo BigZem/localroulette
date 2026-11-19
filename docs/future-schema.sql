@@ -13,6 +13,7 @@ create table activities (
   starts_at timestamptz,
   ends_at timestamptz,
   opening_hours text,
+  last_admission_at time,
   price_pence integer,
   official_url text,
   source_url text,

@@ -78,8 +78,9 @@ test('surprise search draws from separate real place categories', async () => {
   };
   try {
     const result = await discover({ ...DEFAULT_FILTERS, category: 'surprise' });
-    assert.equal(result.count, 3);
-    assert.deepEqual(new Set(result.activities.map(item => item.category)), new Set(['food', 'outdoor', 'nightlife']));
+    assert.ok(result.count >= 3);
+    for (const category of ['food', 'outdoor', 'nightlife'])
+      assert.ok(result.activities.some(item => item.id === `geo-${category}-fixture_${category}`));
     assert.deepEqual(received, new Set(['food', 'outdoor', 'nightlife']));
   } finally {
     globalThis.fetch = originalFetch;

@@ -102,6 +102,10 @@ function matchesTime(activity: Activity, filters: Filters, now: Date): boolean {
   }
   const periods = periodsOnDate(activity.openingHours, today);
   const minute = ukMinutes(now);
+  if (activity.lastAdmissionAt && filters.when !== 'weekend' && filters.when !== 'date') {
+    const match = /^(\d{2}):(\d{2})$/.exec(activity.lastAdmissionAt);
+    if (match && minute >= Number(match[1]) * 60 + Number(match[2])) return false;
+  }
   if (filters.when === 'now') return periods.some(([a, b]) => a <= minute && b > minute);
   if (filters.when === 'today') return periods.some(([, b]) => b > minute);
   return periods.some(([a, b]) => a < 1440 && b > Math.max(1080, minute));
