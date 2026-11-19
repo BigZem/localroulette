@@ -5,6 +5,7 @@ import { takeSpin, spinsLeft } from '../lib/spins.ts';
 import { randomIndex, wheelStop } from '../lib/wheel.ts';
 import { DEFAULT_FILTERS, type Activity } from '../lib/types.ts';
 import { curatedActivities } from '../lib/providers/curated.ts';
+import { directionsUrl } from '../lib/presentation.ts';
 
 const place: Activity = { id: 'osm-node-1', name: 'Test Place', description: 'Fixture', category: 'food', lat: 54.574, lon: -1.235,
   town: 'Middlesbrough', audiences: ['friends'], source: 'osm', demo: false, openingHours: '24/7' };
@@ -42,6 +43,7 @@ test('reviewed places have sources and the museum last-admission cutoff is honou
   assert.equal(curatedActivities.length, 7);
   assert.ok(curatedActivities.every(item => item.source === 'curated' && !item.demo && !item.startsAt
     && item.reviewedOn === '2026-11-19' && item.sourceUrl?.startsWith('https://')));
+  assert.ok(directionsUrl(curatedActivities[0]!).includes(encodeURIComponent(curatedActivities[0]!.address!)));
   const museum = curatedActivities.find(item => item.id === 'curated-preston-park-museum')!;
   const filters = { ...DEFAULT_FILTERS, category: 'family' as const };
   assert.equal(eligible([museum], filters, new Date('2026-11-19T15:00:00Z')).length, 1);

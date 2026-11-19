@@ -12,7 +12,7 @@ export function whenLabel(item: Activity): string {
 }
 export function directionsUrl(item: Activity): string {
   return item.demo ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.town)}`
-    : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${item.lat},${item.lon}`)}`;
+    : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(item.source === 'curated' && item.address ? item.address : `${item.lat},${item.lon}`)}`;
 }
 export function safeExternal(url?: string): string | null {
   if (!url) return null;
