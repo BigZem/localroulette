@@ -89,5 +89,8 @@ export async function getGeoapify(id: string, apiKey: string): Promise<Activity 
   const response = await timedFetch(`https://api.geoapify.com/v2/place-details?${params}`, {}, 8000);
   if (!response.ok) return null;
   const data = await response.json() as { features?: GeoFeature[] };
-  return data.features?.[0] ? normaliseGeoapify(data.features[0], match[1] as PlaceCategory) : null;
+  const item = data.features?.[0] ? normaliseGeoapify(data.features[0], match[1] as PlaceCategory) : null;
+  // Geoapify can return an updated place_id for the same place. Keep the
+  // originally shared ID stable across result cards, favourites and detail URLs.
+  return item ? { ...item, id } : null;
 }

@@ -43,7 +43,7 @@ test('configured live search and share links use Geoapify on the server', async 
     calls.push(url);
     assert.match(url, /^https:\/\/api\.geoapify\.com\/v2\//);
     return Response.json({ features: [{ ...feature, properties: { ...feature.properties,
-      place_id: url.includes('/place-details?') ? 'fixture_02' : 'fixture_01' } }] });
+      place_id: url.includes('/place-details?') ? 'updated_fixture_02' : 'fixture_01' } }] });
   };
   try {
     const result = await discover({ ...DEFAULT_FILTERS, radius: 5, category: 'food' });
