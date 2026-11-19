@@ -15,10 +15,13 @@ export async function discover(filters: Filters): Promise<DiscoveryResult> {
   const warnings: string[] = [];
   if (filters.demo) warnings.push('Demonstration ideas are examples. Their opening times and dates are not verified, so check details before going.');
   if (!filters.demo) {
-    const providers: Array<Promise<Activity[]>> = [searchOsm(lat, lon, filters.radius)];
+    const providers: Array<Promise<Activity[]>> = filters.category === 'events' ? [] : [searchOsm(lat, lon, filters.radius, filters.category)];
     const key = process.env.TICKETMASTER_API_KEY;
-    if (key) providers.push(searchTicketmaster(lat, lon, filters.radius, key));
-    else warnings.push('Live events require the optional Ticketmaster API key. OpenStreetMap places can still load.');
+    const wantsEvents = ['surprise', 'events', 'sport', 'family'].includes(filters.category);
+    if (wantsEvents && key) providers.push(searchTicketmaster(lat, lon, filters.radius, key));
+    else if (wantsEvents) warnings.push(filters.category === 'events'
+      ? 'Live event search requires the optional Ticketmaster API key.'
+      : 'Live events require the optional Ticketmaster API key. OpenStreetMap places can still load.');
     for (const result of await Promise.allSettled(providers)) {
       if (result.status === 'fulfilled') items.push(...result.value);
       else warnings.push(result.reason instanceof Error ? result.reason.message : 'A discovery provider failed.');

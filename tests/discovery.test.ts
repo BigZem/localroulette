@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { discover } from '../lib/discovery.ts';
-import { normaliseOsm } from '../lib/providers/osm.ts';
+import { normaliseOsm, osmQuery } from '../lib/providers/osm.ts';
 import { normaliseTicketmaster } from '../lib/providers/ticketmaster.ts';
 import { demoActivities } from '../lib/providers/demo.ts';
 import { DEFAULT_FILTERS } from '../lib/types.ts';
@@ -18,6 +18,14 @@ test('OSM family suitability requires a child-specific tag', () => {
   const playground = normaliseOsm({ type: 'node', id: 2, lat: 54.5, lon: -1.2, tags: { name: 'Fixture Playground', leisure: 'playground' } });
   assert.equal(park?.audiences.includes('family'), false);
   assert.equal(playground?.audiences.includes('family'), true);
+});
+test('category searches ask OSM for relevant tags before the result cap', () => {
+  const outdoor = osmQuery(54.5742, -1.235, 10, 'outdoor');
+  assert.match(outdoor, /leisure~"park\|nature_reserve\|garden"/);
+  assert.doesNotMatch(outdoor, /amenity~/);
+  const surprise = osmQuery(54.5742, -1.235, 10, 'surprise');
+  assert.match(surprise, /amenity~/);
+  assert.match(surprise, /tourism~/);
 });
 test('Ticketmaster uses only GBP prices and a known future schedule', () => {
   const event = normaliseTicketmaster({ id: 'fixture', name: 'Fixture Concert', dates: { start: { dateTime: '2026-11-20T19:00:00Z' } },

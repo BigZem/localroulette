@@ -1,8 +1,26 @@
-import type { Activity, Category } from '../types.ts';
+import type { Activity, Category, CategoryChoice } from '../types.ts';
 import { cached, remember, timedFetch } from './http.ts';
 
 interface OsmElement { type: 'node' | 'way' | 'relation'; id: number; lat?: number; lon?: number; center?: { lat: number; lon: number }; tags?: Record<string, string> }
 let lastCall = 0;
+
+const OSM_SEARCH: Record<Exclude<Category, 'events'>, { tag: string; value: string }> = {
+  food: { tag: 'amenity', value: 'restaurant|cafe|fast_food' },
+  nightlife: { tag: 'amenity', value: 'pub|bar' },
+  entertainment: { tag: 'amenity', value: 'cinema|theatre|arts_centre' },
+  culture: { tag: 'tourism', value: 'museum|gallery' },
+  hidden: { tag: 'tourism', value: 'attraction|viewpoint' },
+  outdoor: { tag: 'leisure', value: 'park|nature_reserve|garden' },
+  sport: { tag: 'leisure', value: 'sports_centre|fitness_centre|stadium' },
+  family: { tag: 'leisure', value: 'playground' },
+};
+
+export function osmQuery(lat: number, lon: number, miles: number, category: Exclude<CategoryChoice, 'events'>): string {
+  const radius = Math.round(miles * 1609.344);
+  const filters = category === 'surprise' ? Object.values(OSM_SEARCH) : [OSM_SEARCH[category]];
+  const clauses = filters.map(({ tag, value }) => `nwr(around:${radius},${lat},${lon})[name][${tag}~"${value}"];`).join('');
+  return `[out:json][timeout:15];(${clauses});out center 250;`;
+}
 
 function categoryFor(tags: Record<string, string>): Category | null {
   if (['restaurant', 'cafe', 'fast_food'].includes(tags.amenity ?? '')) return 'food';
@@ -35,14 +53,14 @@ export function normaliseOsm(element: OsmElement): Activity | null {
   };
 }
 
-export async function searchOsm(lat: number, lon: number, miles: number): Promise<Activity[]> {
-  const key = `osm:${lat.toFixed(2)}:${lon.toFixed(2)}:${miles}`;
+export async function searchOsm(lat: number, lon: number, miles: number, category: CategoryChoice = 'surprise'): Promise<Activity[]> {
+  if (category === 'events') return [];
+  const key = `osm:${lat.toFixed(2)}:${lon.toFixed(2)}:${miles}:${category}`;
   const hit = cached<Activity[]>(key);
   if (hit) return hit;
   if (Date.now() - lastCall < 1500) throw new Error('OpenStreetMap is busy. Retry shortly.');
   lastCall = Date.now();
-  const radius = Math.round(miles * 1609.344);
-  const query = `[out:json][timeout:15];(nwr(around:${radius},${lat},${lon})[name][amenity~"restaurant|cafe|fast_food|pub|bar|cinema|theatre|arts_centre"];nwr(around:${radius},${lat},${lon})[name][tourism~"museum|gallery|attraction|viewpoint"];nwr(around:${radius},${lat},${lon})[name][leisure~"park|nature_reserve|garden|sports_centre|fitness_centre|stadium|playground"];);out center 250;`;
+  const query = osmQuery(lat, lon, miles, category);
   const res = await timedFetch('https://overpass.kumi.systems/api/interpreter', {
     method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: `data=${encodeURIComponent(query)}`,
   }, 18000);
