@@ -1,0 +1,22 @@
+name: Audit live Teesside discovery
+on:
+  push:
+    branches: [codex/localroulette-mvp]
+    paths:
+      - .github/workflows/live-audit.yml
+      - lib/providers/osm.ts
+      - lib/providers/geoapify.ts
+      - lib/discovery.ts
+      - scripts/live-audit.mjs
+  workflow_dispatch:
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm run content:live-audit
+        env:
+          GEOAPIFY_API_KEY: ${{ secrets.GEOAPIFY_API_KEY }}
