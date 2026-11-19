@@ -41,7 +41,7 @@ Providers return a common Activity model. Search applies location, radius, budge
 `npm run content:audit` reports stored content counts. Live Geoapify and Ticketmaster results are fetched per request and **not stored in a database**, so there is no fixed live-content count.
 `npm run content:live-audit` checks food, outdoor and the default surprise search around Middlesbrough through the configured place provider. Its numbers vary with provider availability and are not a total inventory. The separate GitHub Actions live-audit workflow can rerun this check manually; to use Geoapify there, add a repository Actions secret named `GEOAPIFY_API_KEY`.
 For a local audit with the key in `.env.local`, run `node --env-file=.env.local scripts/live-audit.mjs`. Next.js loads `.env.local` for the app, but a standalone Node script does not.
-`/api/coverage?category=food` (or another place category, or `surprise`) is a bounded, cached check for current matching Middlesbrough places. The count reflects a limited provider sample, not a total inventory. A provider failure returns `eligibleCount: null`, not a misleading zero.
+`/api/coverage?category=food` (or another place category, or `surprise`) is a bounded, cached check for current matching Middlesbrough places. It reports candidate, opening-hours and eligible counts to explain why a filter may return few results. The counts reflect a limited provider sample, not a total inventory. A provider failure returns `eligibleCount: null`, not a misleading zero.
 
 ## Free tier and future income
 
