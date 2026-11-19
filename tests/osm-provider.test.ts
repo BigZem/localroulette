@@ -15,7 +15,7 @@ test('OSM search retries a rate-limited endpoint before failing discovery', asyn
     const result = await queryOverpass('[out:json];node(1);out;', 1000);
     assert.equal(result.elements?.[0]?.id, 99);
     assert.equal(calls.length, 2);
-    assert.match(calls[0]!, /overpass-api\.de/);
-    assert.match(calls[1]!, /overpass\.kumi\.systems/);
+    assert.match(calls[0]!, /overpass\.private\.coffee/);
+    assert.match(calls[1]!, /overpass\.openstreetmap\.fr/);
   } finally { globalThis.fetch = original; }
 });

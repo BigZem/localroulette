@@ -4,9 +4,10 @@ import { cached, remember, timedFetch } from './http.ts';
 interface OsmElement { type: 'node' | 'way' | 'relation'; id: number; lat?: number; lon?: number; center?: { lat: number; lon: number }; tags?: Record<string, string> }
 let lastCall = 0;
 const OVERPASS_ENDPOINTS = [
+  'https://overpass.private.coffee/api/interpreter',
+  'https://overpass.openstreetmap.fr/api/interpreter',
   'https://overpass-api.de/api/interpreter',
   'https://overpass.kumi.systems/api/interpreter',
-  'https://overpass.nchc.org.tw/api/interpreter',
 ] as const;
 
 const OSM_SEARCH: Record<Exclude<Category, 'events'>, { tag: string; value: string }> = {
@@ -63,11 +64,16 @@ export async function queryOverpass(query: string, timeoutMs: number): Promise<{
   for (const endpoint of OVERPASS_ENDPOINTS) {
     try {
       const response = await timedFetch(endpoint, {
-        method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: `data=${encodeURIComponent(query)}`,
+        method: 'POST', headers: {
+          'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+          Accept: 'application/json',
+          'User-Agent': 'LocalRoulette/0.2 (https://localroulette.vercel.app)',
+        }, body: `data=${encodeURIComponent(query)}`,
       }, timeoutMs);
       if (response.ok) return await response.json() as { elements?: OsmElement[] };
       if (response.status === 429) rateLimited++;
-      console.warn('OpenStreetMap endpoint unavailable', response.status, endpoint);
+      const detail = (await response.text()).replace(/\s+/g, ' ').slice(0, 150);
+      console.warn('OpenStreetMap endpoint unavailable', response.status, endpoint, detail);
     } catch (error) {
       console.warn('OpenStreetMap endpoint request failed', endpoint, error instanceof Error ? error.name : 'unknown');
     }
@@ -83,7 +89,7 @@ export async function searchOsm(lat: number, lon: number, miles: number, categor
   if (Date.now() - lastCall < 1500) throw new Error('OpenStreetMap is busy. Retry shortly.');
   lastCall = Date.now();
   const query = osmQuery(lat, lon, miles, category);
-  const data = await queryOverpass(query, 10000);
+  const data = await queryOverpass(query, 7000);
   const items = (data.elements ?? []).map(normaliseOsm).filter((item): item is Activity => item !== null);
   return remember(key, items, 20 * 60000);
 }
@@ -93,7 +99,7 @@ export async function getOsm(id: string): Promise<Activity | null> {
   if (!match) return null;
   const query = `[out:json][timeout:10];${match[1]}(${match[2]});out center;`;
   try {
-    const data = await queryOverpass(query, 8000);
+    const data = await queryOverpass(query, 6000);
     return data.elements?.[0] ? normaliseOsm(data.elements[0]) : null;
   } catch { return null; }
 }
