@@ -12,7 +12,7 @@ export async function GET(request: Request): Promise<NextResponse> {
   try {
     const result = await discover({ ...DEFAULT_FILTERS, location: 'Middlesbrough', radius: 10,
       budget: 'any', audience: 'friends', when: 'today', category, demo: false });
-    const providerAvailable = !result.warnings.some(warning => warning.startsWith('OpenStreetMap'));
+    const providerAvailable = !result.warnings.some(warning => /^(Geoapify|OpenStreetMap|Live place search)/.test(warning));
     return NextResponse.json({
       location: 'Middlesbrough', radiusMiles: 10, category, when: 'today',
       providerAvailable, eligibleCount: providerAvailable ? result.count : null,

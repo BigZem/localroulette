@@ -21,7 +21,7 @@ export default async function ActivityPage({ params }: { params: Promise<{ id: s
       <div><strong>When</strong><span>{whenLabel(item)}</span></div>
       <div><strong>May suit</strong><span>{item.audiences.map(value => AUDIENCE_LABELS[value]).join(', ')} · check age and access rules</span></div>
       {item.venue && <div><strong>Venue</strong><span>{item.venue}</span></div>}{item.organiser && <div><strong>Organiser</strong><span>{item.organiser}</span></div>}
-      <div><strong>Source</strong><span>{item.source === 'osm' ? 'OpenStreetMap contributors' : item.source === 'ticketmaster' ? 'Ticketmaster' : item.demo ? 'Demonstration idea' : 'LocalRoulette curated'}</span></div>
+      <div><strong>Source</strong><span>{item.source === 'osm' ? 'OpenStreetMap contributors' : item.source === 'geoapify' ? 'Geoapify / OpenStreetMap contributors' : item.source === 'ticketmaster' ? 'Ticketmaster' : item.demo ? 'Demonstration idea' : 'LocalRoulette curated'}</span></div>
     </div></section><aside className="detail-aside"><h3>A little heads-up.</h3><p>{item.demo ? 'This is a demonstration idea, not a verified live listing.' : 'Prices, opening times and event availability can change. Confirm with the venue or organiser before travelling.'}</p>
       <a href={directionsUrl(item)} target="_blank" rel="noopener noreferrer">Open map ↗</a>{official && <a href={official} target="_blank" rel="noopener noreferrer">View source / booking ↗</a>}{affiliate && <><a href={affiliate} target="_blank" rel="noopener noreferrer sponsored">Offer (affiliate link) ↗</a><small>{item.affiliateDisclosure}</small></>}
     </aside></div>

@@ -36,6 +36,10 @@ test('Ticketmaster uses only GBP prices and a known future schedule', () => {
 });
 test('a mocked live provider result is filtered by price and radius', async () => {
   const original = globalThis.fetch;
+  const previousKey = process.env.GEOAPIFY_API_KEY;
+  const previousOverpass = process.env.ENABLE_PUBLIC_OVERPASS;
+  delete process.env.GEOAPIFY_API_KEY;
+  process.env.ENABLE_PUBLIC_OVERPASS = 'true';
   globalThis.fetch = async () => Response.json({ elements: [{ type: 'node', id: 31, lat: 54.5742, lon: -1.235, tags: { name: 'Fixture Café', amenity: 'cafe', opening_hours: '24/7' } }] });
   try {
     const any = await discover({ ...DEFAULT_FILTERS, radius: 5, category: 'food' });
@@ -43,5 +47,9 @@ test('a mocked live provider result is filtered by price and radius', async () =
     assert.equal(any.activities[0]?.source, 'osm');
     const free = await discover({ ...DEFAULT_FILTERS, radius: 5, category: 'food', budget: 'free' });
     assert.equal(free.count, 0);
-  } finally { globalThis.fetch = original; }
+  } finally {
+    globalThis.fetch = original;
+    if (previousKey === undefined) delete process.env.GEOAPIFY_API_KEY; else process.env.GEOAPIFY_API_KEY = previousKey;
+    if (previousOverpass === undefined) delete process.env.ENABLE_PUBLIC_OVERPASS; else process.env.ENABLE_PUBLIC_OVERPASS = previousOverpass;
+  }
 });

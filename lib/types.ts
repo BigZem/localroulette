@@ -9,7 +9,7 @@ export type Audience = typeof AUDIENCE_CHOICES[number];
 export type CategoryChoice = typeof CATEGORY_CHOICES[number];
 export type Category = Exclude<CategoryChoice, 'surprise'>;
 export type When = typeof WHEN_CHOICES[number];
-export type ActivitySource = 'osm' | 'ticketmaster' | 'curated' | 'demo';
+export type ActivitySource = 'osm' | 'geoapify' | 'ticketmaster' | 'curated' | 'demo';
 
 export interface Filters {
   location: string;

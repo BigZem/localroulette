@@ -5,6 +5,8 @@ on:
     paths:
       - .github/workflows/live-audit.yml
       - lib/providers/osm.ts
+      - lib/providers/geoapify.ts
+      - lib/discovery.ts
       - scripts/live-audit.mjs
   workflow_dispatch:
 jobs:
@@ -16,3 +18,5 @@ jobs:
         with:
           node-version: '22'
       - run: npm run content:live-audit
+        env:
+          GEOAPIFY_API_KEY: ${{ secrets.GEOAPIFY_API_KEY }}

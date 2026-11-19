@@ -75,7 +75,7 @@ export default function Home() {
       if (!response.ok) throw new Error(data.error || 'Search failed.');
       setWarnings(data.warnings);
       if (!data.activities.length) {
-        setMessage(data.warnings.some(warning => warning.startsWith('OpenStreetMap') || warning.startsWith('Ticketmaster'))
+        setMessage(data.warnings.some(warning => /^(Geoapify|OpenStreetMap|Live place search|Live event search|Ticketmaster)/.test(warning))
           ? 'Live places could not load right now. You can still try clearly labelled demonstration ideas.'
           : 'No matching activities. Try a wider radius, any budget, another time, or labelled demo ideas.');
         return;
