@@ -2,7 +2,7 @@ export const RADIUS_CHOICES = [5, 10, 20, 30, 50] as const;
 export const BUDGET_CHOICES = ['any', 'free', 'under10', 'under25', 'under50', 'over50'] as const;
 export const AUDIENCE_CHOICES = ['solo', 'couple', 'friends', 'family', 'group'] as const;
 export const CATEGORY_CHOICES = ['surprise', 'food', 'entertainment', 'outdoor', 'family', 'sport', 'culture', 'nightlife', 'events', 'hidden'] as const;
-export const WHEN_CHOICES = ['now', 'today', 'tonight', 'weekend', 'date'] as const;
+export const WHEN_CHOICES = ['now', 'today', 'daytime', 'tonight', 'weekend', 'date'] as const;
 
 export type Budget = typeof BUDGET_CHOICES[number];
 export type Audience = typeof AUDIENCE_CHOICES[number];
@@ -68,5 +68,5 @@ export const AUDIENCE_LABELS: Record<Audience, string> = {
   solo: 'Solo', couple: 'Couple / date night', friends: 'Friends', family: 'Family with children', group: 'Group',
 };
 export const WHEN_LABELS: Record<When, string> = {
-  now: 'Right now', today: 'Today', tonight: 'Tonight', weekend: 'This weekend', date: 'Choose a date',
+  now: 'Right now', today: 'Any time today', daytime: 'During the day', tonight: 'Tonight', weekend: 'This weekend', date: 'Choose a date',
 };

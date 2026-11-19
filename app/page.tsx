@@ -4,27 +4,17 @@ import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityCard } from '@/components/ActivityCard';
 import { FiltersPanel } from '@/components/Filters';
-import { Wheel } from '@/components/Wheel';
+import { Wheel, WHEEL_PLACEHOLDERS } from '@/components/Wheel';
 import { shareActivity, useFavorites } from '@/components/use-favorites';
 import { parseFilters } from '@/lib/domain.ts';
 import { directionsUrl, priceLabel, safeExternal, whenLabel } from '@/lib/presentation.ts';
 import { spinsLeft, takeSpin, type SpinRecord } from '@/lib/spins.ts';
-import { randomIndex, wheelStop } from '@/lib/wheel.ts';
+import { randomIndex, wheelPool, wheelStop, WHEEL_SEGMENTS } from '@/lib/wheel.ts';
 import { DEFAULT_FILTERS, type Activity, type Filters } from '@/lib/types.ts';
 import type { DiscoveryResult } from '@/lib/discovery.ts';
 
 const FILTER_KEY = 'localroulette:filters', SPIN_KEY = 'localroulette:spins', SEEN_KEY = 'localroulette:seen';
-const PLACEHOLDER_LABELS = ['Food & drink', 'Hidden gems', 'Outdoors', 'Live events', 'Culture', 'Family', 'Nightlife', 'Surprise'];
-
 function random(): number { const value = new Uint32Array(1); crypto.getRandomValues(value); return (value[0] ?? 0) / 4294967296; }
-function wheelPool(items: Activity[], chosen: Activity): Activity[] {
-  const others = items.filter(item => item.id !== chosen.id);
-  const pool = [chosen];
-  while (pool.length < Math.min(8, items.length)) pool.push(others.splice(randomIndex(others.length, random), 1)[0]!);
-  while (pool.length < 8) pool.push(pool[pool.length % Math.max(1, items.length)]!);
-  for (let index = pool.length - 1; index > 0; index--) { const other = randomIndex(index + 1, random); [pool[index], pool[other]] = [pool[other]!, pool[index]!]; }
-  return pool;
-}
 function playTone(muted: boolean) {
   if (muted) return;
   try {
@@ -42,7 +32,8 @@ export default function Home() {
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false), [spinning, setSpinning] = useState(false);
   const [rotation, setRotation] = useState(0), rotationRef = useRef(0);
-  const [labels, setLabels] = useState(PLACEHOLDER_LABELS);
+  const [labels, setLabels] = useState(WHEEL_PLACEHOLDERS);
+  const [matchCount, setMatchCount] = useState<number | null>(null);
   const [result, setResult] = useState<Activity | null>(null);
   const [message, setMessage] = useState(''), [warnings, setWarnings] = useState<string[]>([]);
   const [muted, setMuted] = useState(true), [reduced, setReduced] = useState(false);
@@ -73,7 +64,7 @@ export default function Home() {
       const response = await fetch('/api/search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(valid) });
       const data = await response.json() as DiscoveryResult & { error?: string };
       if (!response.ok) throw new Error(data.error || 'Search failed.');
-      setWarnings(data.warnings);
+      setWarnings(data.warnings); setMatchCount(data.count);
       if (!data.activities.length) {
         setMessage(data.warnings.some(warning => /^(Geoapify|OpenStreetMap|Live place search|Live event search|Ticketmaster)/.test(warning))
           ? 'Live places could not load right now. You can still try clearly labelled demonstration ideas.'
@@ -88,7 +79,7 @@ export default function Home() {
       const next = takeSpin(record);
       if (!next) return;
       setRecord(next); try { localStorage.setItem(SPIN_KEY, JSON.stringify(next)); sessionStorage.setItem(SEEN_KEY, JSON.stringify([...seen, chosen.id])); } catch { /* Storage optional. */ }
-      const pool = wheelPool(data.activities, chosen);
+      const pool = wheelPool(data.activities, chosen, random);
       const index = pool.findIndex(item => item.id === chosen.id);
       const target = wheelStop(rotationRef.current, index, pool.length);
       rotationRef.current = target;
@@ -110,6 +101,7 @@ export default function Home() {
       <FiltersPanel filters={filters} onChange={setFilters} onMessage={setMessage}/>
     </div><div className="hero-play" ref={wheelRef}><div className="orbit-note">YOUR NEXT<br/>ADVENTURE</div><Wheel labels={labels} rotation={rotation} spinning={spinning} reducedMotion={reduced}/>
       <div className="spin-box"><span className="eyebrow">02 / LET FATE DECIDE</span><h2>Ready? Give it a spin.</h2><p>We match your choices first. The wheel selects fairly from eligible results.</p>
+        <div className="wheel-pool-note" aria-live="polite"><strong>{matchCount === null ? '12 vivid slices' : `${matchCount} matching ${matchCount === 1 ? 'idea' : 'ideas'}`}</strong><span>{matchCount === null ? 'Real names appear when you spin.' : `A random set of up to ${WHEEL_SEGMENTS} appears on the wheel.`}</span></div>
         <button className="spin-button" type="button" onClick={() => void spin()} disabled={busy || spinning}>{busy ? 'FINDING IDEAS…' : spinning ? 'SPINNING…' : '✦ SPIN THE WHEEL'} <span aria-hidden="true">↗</span></button>
         <div className="spin-meta"><span>{remaining} of 3 free spins left today</span><button type="button" onClick={() => { setMuted(!muted); try { localStorage.setItem('localroulette:muted', JSON.stringify(!muted)); } catch { /* Optional. */ } }} aria-label={muted ? 'Turn sound on' : 'Turn sound off'}>{muted ? '♪ Sound off' : '♫ Sound on'}</button></div>
         <small>Resets at UK midnight. Browser limits can be reset or bypassed.</small>{installPrompt && <button type="button" className="install-button" onClick={() => { void installPrompt.prompt(); setInstallPrompt(null); }}>Install LocalRoulette ↗</button>}

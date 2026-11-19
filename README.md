@@ -2,7 +2,7 @@
 
 **Spin Your City. Discover Something New.** A mobile-first Teesside discovery app with a fair roulette wheel, configurable live place search, optional events, saved ideas and a planned Premium tier.
 
-The application lives at the repository root. The original `event-roulette-pwa-starter/` folder is retained for reference while the new app is validated.
+The application lives at the repository root.
 
 ## Local setup
 
@@ -33,10 +33,12 @@ GitHub Actions runs the tests, TypeScript check, lint, production build and a lo
 - **Geoapify:** live named places through the Places API using OpenStreetMap contributor data. Obtain a key from [Geoapify](https://www.geoapify.com/) and check its current free-tier quota and attribution terms. Add `GEOAPIFY_API_KEY` to `.env.local` locally and to the host's encrypted server environment for deployment. The app sends location, radius and category to Geoapify; the key never goes to the browser. Provider data is crowdsourced and should be checked before travel.
 - **OpenStreetMap Overpass:** an optional diagnostic fallback, enabled only with `ENABLE_PUBLIC_OVERPASS=true` when no Geoapify key is present. Public endpoints failed or timed out in our GitHub and Vercel checks, so this is not the recommended production source.
 - **Ticketmaster:** optional live events through the Discovery API. The key stays on the server. Only provider-supplied GBP prices are shown, with a warning that fees and availability can change.
-- **Curated:** `lib/providers/curated.ts` contains **7** real Teesside venues checked against their operators' pages on 19 November 2026. Their addresses, published hours and source links are recorded; bookable sessions are not guaranteed. Recheck these records regularly.
+- **Curated:** `lib/providers/curated.ts` contains **25** reviewed Teesside venue and activity records checked against operator, council or regional tourism pages on 19 November 2026. Their addresses, published hours and source links are recorded; bookable sessions are not guaranteed. Redcar, Hartlepool, Yarm, Middlesbrough and Stockton are represented. Recheck these records regularly, especially holiday hours.
 - **Demonstration:** `lib/providers/demo.ts` contains **12** example activity ideas. These are labelled as examples and never presented as genuine upcoming events or venue bookings.
 
-Providers return a common Activity model. Search applies location, radius, budget, audience, category and date filters, then deduplicates results. The default Surprise me search combines food, outdoor and nightlife place queries so one dense category cannot crowd out the others. Family activities include venues explicitly marked suitable for children even if their primary category is sport or entertainment. Unknown prices are excluded from strict budget filters; places without parseable hours are excluded from time filters. Simple opening-hour rules that cross midnight are supported. Provider calls use timeouts, small in-memory caches and basic per-instance rate protection. For larger traffic, add a shared cache, global quotas and provider agreements.
+Providers return a common Activity model. Search applies location, radius, budget, audience, category and date filters, then deduplicates results. The default Surprise me search combines food, outdoor and nightlife place queries so one dense category cannot crowd out the others. Family activities include venues explicitly marked suitable for children even if their primary category is sport or entertainment. The quick **Day out** and **Tonight** choices filter by published hours before or after 6pm UK time; **Any time today** includes both. Unknown prices are excluded from strict budget filters; places without parseable hours are excluded from time filters. Simple opening-hour rules that cross midnight are supported. Provider calls use timeouts, small in-memory caches and basic per-instance rate protection. For larger traffic, add a shared cache, global quotas and provider agreements.
+
+The wheel has up to 12 visual slices, one per displayed activity, without padding a small result set with duplicate names. On each spin, all eligible results have equal selection odds; up to 12 matching names are then placed on the wheel and the pointer stops at the selected result. The on-screen match count reflects the result set returned by that search, not the number of segments.
 
 `npm run content:audit` reports stored content counts. Live Geoapify and Ticketmaster results are fetched per request and **not stored in a database**, so there is no fixed live-content count.
 `npm run content:live-audit` checks food, outdoor and the default surprise search around Middlesbrough through the configured place provider. Its numbers vary with provider availability and are not a total inventory. The separate GitHub Actions live-audit workflow can rerun this check manually; to use Geoapify there, add a repository Actions secret named `GEOAPIFY_API_KEY`.
@@ -53,7 +55,7 @@ Premium is planned at **£4.99/month**, but billing and paid features are not ac
 
 The recommended first host is Vercel, which supports the Next.js API routes needed to keep external provider keys off the client. Import this GitHub repository, set the **root directory to the repository root**, build with `npm run build`, and configure `GEOAPIFY_API_KEY` and, if available, `TICKETMASTER_API_KEY` only in encrypted server environment settings. Redeploy after adding a key. A free plan may be suitable for initial testing, subject to current hosting and provider terms and limits. If Vercel's GitHub login connection has not been enabled, source uploads can deploy previews but Git pushes will not deploy automatically.
 
-Verify HTTPS, API responses, source attribution, cache behaviour, saved ideas, share links, PWA installation and mobile layouts before public launch. The GitHub branch is source storage; it is not itself a live phone link. The app has no verified live Middlesbrough inventory until a key is configured and `/api/coverage` returns a provider result.
+Verify HTTPS, API responses, source attribution, cache behaviour, saved ideas, share links, PWA installation and mobile layouts before public launch. The GitHub branch is source storage; it is not itself a live phone link. The deployed Teesside build has a server-side Geoapify key, but live result counts change with provider data, location and time filters; use `/api/coverage` for a current sample.
 
 ## Android
 

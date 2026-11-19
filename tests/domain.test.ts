@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { dedupe, distanceMiles, eligible, parseFilters, ukDate } from '../lib/domain.ts';
 import { takeSpin, spinsLeft } from '../lib/spins.ts';
-import { randomIndex, wheelStop } from '../lib/wheel.ts';
+import { randomIndex, wheelPool, wheelStop } from '../lib/wheel.ts';
 import { DEFAULT_FILTERS, type Activity } from '../lib/types.ts';
 import { curatedActivities } from '../lib/providers/curated.ts';
 import { directionsUrl } from '../lib/presentation.ts';
@@ -30,6 +30,19 @@ test('time searches require usable hours or an upcoming event', () => {
   assert.equal(eligible([event], { ...DEFAULT_FILTERS, category: 'events' }, now).length, 0);
   assert.equal(eligible([{ ...event, endsAt: '2026-11-18T20:00:00Z' }], { ...DEFAULT_FILTERS, category: 'events', when: 'now' }, now).length, 1);
 });
+test('daytime and tonight separate daytime visits from evening choices', () => {
+  const daytime = { ...DEFAULT_FILTERS, when: 'daytime' as const };
+  const tonight = { ...DEFAULT_FILTERS, when: 'tonight' as const };
+  const atNoon = new Date('2026-11-19T12:00:00Z');
+  const gallery: Activity = { ...place, category: 'culture', openingHours: 'Th 10:00-16:00' };
+  const evening: Activity = { ...place, category: 'entertainment', openingHours: 'Th 19:00-23:00' };
+  assert.deepEqual(eligible([gallery, evening], daytime, atNoon).map(item => item.id), [gallery.id]);
+  assert.deepEqual(eligible([gallery, evening], tonight, atNoon).map(item => item.category), ['entertainment']);
+  assert.equal(eligible([gallery], daytime, new Date('2026-11-19T18:30:00Z')).length, 0);
+  const event: Activity = { ...place, category: 'events', openingHours: undefined, startsAt: '2026-11-19T13:00:00Z', endsAt: '2026-11-19T15:00:00Z' };
+  assert.equal(eligible([event], { ...daytime, category: 'events' }, atNoon).length, 1);
+  assert.equal(eligible([event], { ...tonight, category: 'events' }, atNoon).length, 0);
+});
 test('overnight venue hours count for today and after midnight', () => {
   const pub: Activity = { ...place, category: 'nightlife', openingHours: 'Th 16:00-02:00' };
   const thursday = new Date('2026-11-19T15:30:00Z');
@@ -40,9 +53,11 @@ test('overnight venue hours count for today and after midnight', () => {
   assert.equal(eligible([pub], { ...DEFAULT_FILTERS, category: 'nightlife', when: 'today' }, fridayNight).length, 1);
 });
 test('reviewed places have sources and the museum last-admission cutoff is honoured', () => {
-  assert.equal(curatedActivities.length, 7);
+  assert.equal(curatedActivities.length, 25);
   assert.ok(curatedActivities.every(item => item.source === 'curated' && !item.demo && !item.startsAt
     && item.reviewedOn === '2026-11-19' && item.sourceUrl?.startsWith('https://')));
+  assert.equal(new Set(curatedActivities.map(item => item.id)).size, curatedActivities.length);
+  assert.ok(curatedActivities.filter(item => item.category === 'nightlife').length >= 7);
   assert.ok(directionsUrl(curatedActivities[0]!).includes(encodeURIComponent(curatedActivities[0]!.address!)));
   const museum = curatedActivities.find(item => item.id === 'curated-preston-park-museum')!;
   const filters = { ...DEFAULT_FILTERS, category: 'family' as const };
@@ -71,10 +86,19 @@ test('free spins reset at UK midnight', () => {
   assert.equal(spinsLeft(record, after), 3);
 });
 test('wheel lands at the chosen segment centre', () => {
-  for (const count of [1, 2, 8]) for (let i = 0; i < count; i++) {
+  for (const count of [1, 2, 8, 12]) for (let i = 0; i < count; i++) {
     const stop = wheelStop(133, i, count), centre = (i + 0.5) * 360 / count;
     assert.ok(Math.abs(((stop + centre) % 360 + 360) % 360) < 0.00001 || Math.abs(((stop + centre) % 360 + 360) % 360 - 360) < 0.00001);
   }
   assert.equal(randomIndex(8, () => 0), 0);
   assert.equal(randomIndex(8, () => 0.999999), 7);
+});
+test('wheel pool shows unique eligible options up to twelve slices', () => {
+  const items = Array.from({ length: 16 }, (_, index) => ({ id: `choice-${index}` }));
+  const pool = wheelPool(items, items[15]!, () => 0.25);
+  assert.equal(pool.length, 12);
+  assert.equal(new Set(pool.map(item => item.id)).size, 12);
+  assert.ok(pool.some(item => item.id === items[15]!.id));
+  assert.equal(wheelPool(items.slice(0, 3), items[1]!, () => 0).length, 3);
+  assert.throws(() => wheelPool(items.slice(0, 3), items[15]!), /not eligible/);
 });

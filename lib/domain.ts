@@ -84,6 +84,7 @@ function matchesTime(activity: Activity, filters: Filters, now: Date): boolean {
     const date = ukDate(start);
     if (filters.when === 'date') return date === filters.date;
     if (filters.when === 'today') return date === today;
+    if (filters.when === 'daytime') return date === today && ukMinutes(now) < 1080 && ukMinutes(start) < 1080;
     if (filters.when === 'now') return start <= now && end !== null && end > now;
     if (filters.when === 'tonight') return date === today && ukMinutes(start) >= 1080;
     const weekday = new Date(`${today}T12:00:00Z`).getUTCDay();
@@ -108,6 +109,7 @@ function matchesTime(activity: Activity, filters: Filters, now: Date): boolean {
   }
   if (filters.when === 'now') return periods.some(([a, b]) => a <= minute && b > minute);
   if (filters.when === 'today') return periods.some(([, b]) => b > minute);
+  if (filters.when === 'daytime') return minute < 1080 && periods.some(([a, b]) => a < 1080 && b > minute);
   return periods.some(([a, b]) => a < 1440 && b > Math.max(1080, minute));
 }
 
