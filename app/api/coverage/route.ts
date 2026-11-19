@@ -1,17 +1,18 @@
 import { NextResponse } from 'next/server';
 import { discover } from '@/lib/discovery.ts';
-import { DEFAULT_FILTERS } from '@/lib/types.ts';
+import { DEFAULT_FILTERS, type CategoryChoice } from '@/lib/types.ts';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+const CATEGORIES = new Set(['surprise', 'food', 'outdoor', 'entertainment', 'family', 'sport', 'culture', 'nightlife', 'hidden']);
 
 export async function GET(request: Request): Promise<NextResponse> {
   const category = new URL(request.url).searchParams.get('category') ?? 'food';
-  if (category !== 'food' && category !== 'outdoor' && category !== 'surprise')
-    return NextResponse.json({ error: 'Choose food, outdoor or surprise.' }, { status: 400 });
+  if (!CATEGORIES.has(category))
+    return NextResponse.json({ error: 'Choose a place category or surprise.' }, { status: 400 });
   try {
     const result = await discover({ ...DEFAULT_FILTERS, location: 'Middlesbrough', radius: 10,
-      budget: 'any', audience: 'friends', when: 'today', category, demo: false });
+      budget: 'any', audience: 'friends', when: 'today', category: category as CategoryChoice, demo: false });
     const providerAvailable = !result.warnings.some(warning => /^(Geoapify|OpenStreetMap|Live place search)/.test(warning));
     return NextResponse.json({
       location: 'Middlesbrough', radiusMiles: 10, category, when: 'today',
