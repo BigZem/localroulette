@@ -23,6 +23,7 @@ npm run lint
 npm run build
 npm run smoke
 npm run content:audit
+npm run content:live-audit
 ```
 
 GitHub Actions runs the tests, TypeScript check, lint, production build and a local runtime smoke check on the working branch. A successful build does not prove phone or live-provider behaviour.
@@ -37,6 +38,7 @@ GitHub Actions runs the tests, TypeScript check, lint, production build and a lo
 Providers return a common Activity model. Search applies location, radius, budget, audience, category and date filters, then deduplicates results. Provider calls use timeouts, small in-memory caches and basic per-instance rate protection. For larger traffic, add a shared cache, global quotas and provider agreements.
 
 `npm run content:audit` reports stored content counts. Live OSM and Ticketmaster results are fetched per request and **not stored in a database**, so there is no fixed live-content count.
+`npm run content:live-audit` checks two current Middlesbrough categories through the real OSM adapter. Its numbers vary with provider availability and are not a total inventory. The separate GitHub Actions live-audit workflow can rerun this check manually.
 
 ## Free tier and future income
 
