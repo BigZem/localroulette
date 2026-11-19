@@ -39,6 +39,7 @@ Providers return a common Activity model. Search applies location, radius, budge
 
 `npm run content:audit` reports stored content counts. Live OSM and Ticketmaster results are fetched per request and **not stored in a database**, so there is no fixed live-content count.
 `npm run content:live-audit` checks two current Middlesbrough categories through the real OSM adapter. Its numbers vary with provider availability and are not a total inventory. The separate GitHub Actions live-audit workflow can rerun this check manually.
+`/api/coverage?category=food` and `?category=outdoor` are bounded, cached checks for current matching Middlesbrough places. A provider failure returns `eligibleCount: null`, not a misleading zero.
 
 ## Free tier and future income
 

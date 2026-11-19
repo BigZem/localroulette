@@ -48,6 +48,7 @@ try {
 
   const badSearch = await fetch(`${base}/api/search`, { method: 'POST', body: '{' });
   assert.equal(badSearch.status, 400);
+  assert.equal((await fetch(`${base}/api/coverage?category=events`)).status, 400);
   console.log(`Runtime smoke passed: homepage, manifest, demo search (${result.activities.length} results), activity details, invalid request.`);
 } finally {
   if (server.exitCode === null) {
