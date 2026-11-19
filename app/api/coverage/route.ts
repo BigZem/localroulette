@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { discover } from '@/lib/discovery.ts';
+import { discover, SURPRISE_PLACE_CATEGORIES } from '@/lib/discovery.ts';
+import { dedupe } from '@/lib/domain.ts';
 import { searchGeoapify } from '@/lib/providers/geoapify.ts';
 import { DEFAULT_FILTERS, type CategoryChoice } from '@/lib/types.ts';
 
@@ -15,8 +16,9 @@ export async function GET(request: Request): Promise<NextResponse> {
     const result = await discover({ ...DEFAULT_FILTERS, location: 'Middlesbrough', radius: 10,
       budget: 'any', audience: 'friends', when: 'today', category: category as CategoryChoice, demo: false });
     const providerAvailable = !result.warnings.some(warning => /^(Geoapify|OpenStreetMap|Live place search)/.test(warning));
+    const candidateCategories = category === 'surprise' ? SURPRISE_PLACE_CATEGORIES : [category as Exclude<CategoryChoice, 'events' | 'surprise'>];
     const candidates = providerAvailable && process.env.GEOAPIFY_API_KEY
-      ? await searchGeoapify(result.searchedFrom.lat, result.searchedFrom.lon, 10, category as Exclude<CategoryChoice, 'events'>, process.env.GEOAPIFY_API_KEY)
+      ? dedupe((await Promise.all(candidateCategories.map(value => searchGeoapify(result.searchedFrom.lat, result.searchedFrom.lon, 10, value, process.env.GEOAPIFY_API_KEY!)))).flat())
       : null;
     return NextResponse.json({
       location: 'Middlesbrough', radiusMiles: 10, category, when: 'today',

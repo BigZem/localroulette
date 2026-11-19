@@ -1,5 +1,5 @@
 import { dedupe, distanceMiles, eligible } from './domain.ts';
-import type { Activity, Filters } from './types.ts';
+import type { Activity, CategoryChoice, Filters } from './types.ts';
 import { curatedActivities } from './providers/curated.ts';
 import { demoActivities } from './providers/demo.ts';
 import { resolveLocation } from './providers/geo.ts';
@@ -8,6 +8,7 @@ import { getOsm, searchOsm } from './providers/osm.ts';
 import { getTicketmaster, searchTicketmaster } from './providers/ticketmaster.ts';
 
 const recent = new Map<string, Activity>();
+export const SURPRISE_PLACE_CATEGORIES = ['food', 'outdoor', 'nightlife'] as const satisfies ReadonlyArray<Exclude<CategoryChoice, 'surprise' | 'events'>>;
 export interface DiscoveryResult { activities: Activity[]; count: number; demo: boolean; warnings: string[]; searchedFrom: { lat: number; lon: number } }
 
 export async function discover(filters: Filters): Promise<DiscoveryResult> {
@@ -19,7 +20,9 @@ export async function discover(filters: Filters): Promise<DiscoveryResult> {
     const providers: Array<Promise<Activity[]>> = [];
     if (filters.category !== 'events') {
       const placeKey = process.env.GEOAPIFY_API_KEY?.trim();
-      if (placeKey) providers.push(searchGeoapify(lat, lon, filters.radius, filters.category, placeKey));
+      if (placeKey && filters.category === 'surprise')
+        for (const category of SURPRISE_PLACE_CATEGORIES) providers.push(searchGeoapify(lat, lon, filters.radius, category, placeKey));
+      else if (placeKey) providers.push(searchGeoapify(lat, lon, filters.radius, filters.category, placeKey));
       else if (process.env.ENABLE_PUBLIC_OVERPASS === 'true') providers.push(searchOsm(lat, lon, filters.radius, filters.category));
       else warnings.push('Live place search needs a Geoapify API key. Try the clearly labelled demonstration ideas until it is configured.');
     }

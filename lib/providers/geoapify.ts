@@ -23,6 +23,8 @@ const CATEGORY_KEYS: Record<PlaceCategory, string[]> = {
   hidden: ['tourism.attraction.viewpoint', 'tourism.sights.castle', 'tourism.sights.ruines'],
 };
 const CATEGORY_ORDER: PlaceCategory[] = ['family', 'food', 'nightlife', 'culture', 'entertainment', 'outdoor', 'sport', 'hidden'];
+const LOCAL_LIMITS: Record<PlaceCategory, number> = { food: 150, outdoor: 50, nightlife: 80,
+  entertainment: 50, culture: 50, sport: 50, family: 50, hidden: 50 };
 let nextCall = 0;
 
 function safeHttps(value: unknown): string | undefined {
@@ -73,12 +75,13 @@ export async function searchGeoapify(lat: number, lon: number, miles: number, ca
   nextCall = startAt + 1000;
   if (startAt > Date.now()) await new Promise(resolve => setTimeout(resolve, startAt - Date.now()));
   const radius = Math.round(miles * 1609.344);
+  const limit = miles > 10 || category === 'surprise' ? 200 : LOCAL_LIMITS[category];
   const params = new URLSearchParams({ categories: geoapifyCategories(category), filter: `circle:${lon},${lat},${radius}`,
-    bias: `proximity:${lon},${lat}`, limit: '200', apiKey });
+    bias: `proximity:${lon},${lat}`, limit: String(limit), apiKey });
   const response = await timedFetch(`https://api.geoapify.com/v2/places?${params}`, {}, 9000);
   if (!response.ok) throw new Error(response.status === 429 ? 'Geoapify rate limit reached.' : 'Geoapify places are temporarily unavailable.');
   const data = await response.json() as { features?: GeoFeature[] };
-  const items = (data.features ?? []).map(feature => normaliseGeoapify(feature, category)).filter((item): item is Activity => item !== null);
+  const items = (Array.isArray(data.features) ? data.features : []).map(feature => normaliseGeoapify(feature, category)).filter((item): item is Activity => item !== null);
   return remember(key, items, 20 * 60000);
 }
 

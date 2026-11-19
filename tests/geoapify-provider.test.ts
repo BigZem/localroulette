@@ -60,3 +60,29 @@ test('configured live search and share links use Geoapify on the server', async 
     if (previousOverpass === undefined) delete process.env.ENABLE_PUBLIC_OVERPASS; else process.env.ENABLE_PUBLIC_OVERPASS = previousOverpass;
   }
 });
+
+test('surprise search draws from separate real place categories', async () => {
+  const originalFetch = globalThis.fetch;
+  const previousKey = process.env.GEOAPIFY_API_KEY;
+  process.env.GEOAPIFY_API_KEY = 'fixture-secret';
+  const received = new Set<string>();
+  globalThis.fetch = async input => {
+    const categories = new URL(String(input)).searchParams.get('categories') ?? '';
+    const category = categories.includes('catering.restaurant') ? 'food'
+      : categories.includes('leisure.park') ? 'outdoor' : 'nightlife';
+    received.add(category);
+    const name = { food: 'Fixture Café', outdoor: 'Fixture Park', nightlife: 'Fixture Pub' }[category];
+    const providerCategory = { food: 'catering.cafe', outdoor: 'leisure.park', nightlife: 'catering.pub' }[category];
+    return Response.json({ features: [{ ...feature, properties: { ...feature.properties,
+      place_id: `fixture_${category}`, name, categories: [providerCategory] } }] });
+  };
+  try {
+    const result = await discover({ ...DEFAULT_FILTERS, category: 'surprise' });
+    assert.equal(result.count, 3);
+    assert.deepEqual(new Set(result.activities.map(item => item.category)), new Set(['food', 'outdoor', 'nightlife']));
+    assert.deepEqual(received, new Set(['food', 'outdoor', 'nightlife']));
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (previousKey === undefined) delete process.env.GEOAPIFY_API_KEY; else process.env.GEOAPIFY_API_KEY = previousKey;
+  }
+});

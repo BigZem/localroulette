@@ -58,10 +58,19 @@ function listedIntervals(hours: string, date: string): Array<[number, number]> {
       if (!start || !end) continue;
       const minute = (text: string) => { const [h, m] = text.split(':').map(Number); return (h ?? 0) * 60 + (m ?? 0); };
       const a = minute(start), b = minute(end);
-      if (a >= 0 && a < b && b <= 1440) result.push([a, b]);
+      if (a >= 0 && a < 1440 && b >= 0 && b <= 1440) result.push([a, b <= a ? b + 1440 : b]);
     }
   }
   return result;
+}
+
+function periodsOnDate(hours: string, date: string): Array<[number, number]> {
+  const previous = new Date(`${date}T12:00:00Z`);
+  previous.setUTCDate(previous.getUTCDate() - 1);
+  const previousDate = previous.toISOString().slice(0, 10);
+  const afterMidnight = listedIntervals(hours, previousDate).filter(([, end]) => end > 1440)
+    .map(([start, end]): [number, number] => [start - 1440, end - 1440]);
+  return [...afterMidnight, ...listedIntervals(hours, date)];
 }
 
 function matchesTime(activity: Activity, filters: Filters, now: Date): boolean {
@@ -84,14 +93,14 @@ function matchesTime(activity: Activity, filters: Filters, now: Date): boolean {
     return date === ukDate(saturday) || date === ukDate(sunday);
   }
   if (!activity.openingHours) return false;
-  if (filters.when === 'date' && filters.date) return listedIntervals(activity.openingHours, filters.date).length > 0;
+  if (filters.when === 'date' && filters.date) return periodsOnDate(activity.openingHours, filters.date).length > 0;
   if (filters.when === 'weekend') {
     const weekday = new Date(`${today}T12:00:00Z`).getUTCDay();
     const saturday = new Date(`${today}T12:00:00Z`); saturday.setUTCDate(saturday.getUTCDate() + (6 - weekday + 7) % 7);
     const sunday = new Date(saturday); sunday.setUTCDate(sunday.getUTCDate() + 1);
-    return listedIntervals(activity.openingHours, ukDate(saturday)).length > 0 || listedIntervals(activity.openingHours, ukDate(sunday)).length > 0;
+    return periodsOnDate(activity.openingHours, ukDate(saturday)).length > 0 || periodsOnDate(activity.openingHours, ukDate(sunday)).length > 0;
   }
-  const periods = listedIntervals(activity.openingHours, today);
+  const periods = periodsOnDate(activity.openingHours, today);
   const minute = ukMinutes(now);
   if (filters.when === 'now') return periods.some(([a, b]) => a <= minute && b > minute);
   if (filters.when === 'today') return periods.some(([, b]) => b > minute);

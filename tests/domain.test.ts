@@ -28,6 +28,15 @@ test('time searches require usable hours or an upcoming event', () => {
   assert.equal(eligible([event], { ...DEFAULT_FILTERS, category: 'events' }, now).length, 0);
   assert.equal(eligible([{ ...event, endsAt: '2026-11-18T20:00:00Z' }], { ...DEFAULT_FILTERS, category: 'events', when: 'now' }, now).length, 1);
 });
+test('overnight venue hours count for today and after midnight', () => {
+  const pub: Activity = { ...place, category: 'nightlife', openingHours: 'Th 16:00-02:00' };
+  const thursday = new Date('2026-11-19T15:30:00Z');
+  assert.equal(eligible([pub], { ...DEFAULT_FILTERS, category: 'nightlife', when: 'today' }, thursday).length, 1);
+  assert.equal(eligible([pub], { ...DEFAULT_FILTERS, category: 'nightlife', when: 'now' }, thursday).length, 0);
+  const fridayNight = new Date('2026-11-20T01:00:00Z');
+  assert.equal(eligible([pub], { ...DEFAULT_FILTERS, category: 'nightlife', when: 'now' }, fridayNight).length, 1);
+  assert.equal(eligible([pub], { ...DEFAULT_FILTERS, category: 'nightlife', when: 'today' }, fridayNight).length, 1);
+});
 test('distance and duplicate checks use coordinates', () => {
   assert.ok(distanceMiles(54.574, -1.235, 54.68, -1.21) > 5);
   assert.equal(dedupe([place, { ...place, id: 'osm-node-2', name: 'Test Place!', lat: 54.5741 }]).length, 1);
