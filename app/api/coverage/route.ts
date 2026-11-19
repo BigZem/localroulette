@@ -23,6 +23,8 @@ export async function GET(request: Request): Promise<NextResponse> {
     return NextResponse.json({
       location: 'Middlesbrough', radiusMiles: 10, category, when: 'today',
       providerAvailable, eligibleCount: providerAvailable ? result.count : null,
+      eligibleCuratedCount: result.activities.filter(item => item.source === 'curated').length,
+      eligibleProviderCount: result.activities.filter(item => item.source !== 'curated').length,
       candidateCount: candidates?.length ?? null,
       candidatesWithOpeningHours: candidates?.filter(item => item.openingHours).length ?? null,
       samples: providerAvailable ? result.activities.slice(0, 5).map(item => ({ id: item.id, name: item.name, town: item.town, source: item.source })) : [],
