@@ -3,6 +3,11 @@ import { cached, remember, timedFetch } from './http.ts';
 
 interface OsmElement { type: 'node' | 'way' | 'relation'; id: number; lat?: number; lon?: number; center?: { lat: number; lon: number }; tags?: Record<string, string> }
 let lastCall = 0;
+const OVERPASS_ENDPOINTS = [
+  'https://overpass-api.de/api/interpreter',
+  'https://overpass.kumi.systems/api/interpreter',
+  'https://overpass.nchc.org.tw/api/interpreter',
+] as const;
 
 const OSM_SEARCH: Record<Exclude<Category, 'events'>, { tag: string; value: string }> = {
   food: { tag: 'amenity', value: 'restaurant|cafe|fast_food' },
@@ -53,6 +58,23 @@ export function normaliseOsm(element: OsmElement): Activity | null {
   };
 }
 
+export async function queryOverpass(query: string, timeoutMs: number): Promise<{ elements?: OsmElement[] }> {
+  let rateLimited = 0;
+  for (const endpoint of OVERPASS_ENDPOINTS) {
+    try {
+      const response = await timedFetch(endpoint, {
+        method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: `data=${encodeURIComponent(query)}`,
+      }, timeoutMs);
+      if (response.ok) return await response.json() as { elements?: OsmElement[] };
+      if (response.status === 429) rateLimited++;
+      console.warn('OpenStreetMap endpoint unavailable', response.status, endpoint);
+    } catch (error) {
+      console.warn('OpenStreetMap endpoint request failed', endpoint, error instanceof Error ? error.name : 'unknown');
+    }
+  }
+  throw new Error(rateLimited === OVERPASS_ENDPOINTS.length ? 'OpenStreetMap rate limit reached.' : 'OpenStreetMap places are temporarily unavailable.');
+}
+
 export async function searchOsm(lat: number, lon: number, miles: number, category: CategoryChoice = 'surprise'): Promise<Activity[]> {
   if (category === 'events') return [];
   const key = `osm:${lat.toFixed(2)}:${lon.toFixed(2)}:${miles}:${category}`;
@@ -61,11 +83,7 @@ export async function searchOsm(lat: number, lon: number, miles: number, categor
   if (Date.now() - lastCall < 1500) throw new Error('OpenStreetMap is busy. Retry shortly.');
   lastCall = Date.now();
   const query = osmQuery(lat, lon, miles, category);
-  const res = await timedFetch('https://overpass.kumi.systems/api/interpreter', {
-    method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: `data=${encodeURIComponent(query)}`,
-  }, 18000);
-  if (!res.ok) throw new Error(res.status === 429 ? 'OpenStreetMap rate limit reached.' : 'OpenStreetMap places are temporarily unavailable.');
-  const data = await res.json() as { elements?: OsmElement[] };
+  const data = await queryOverpass(query, 10000);
   const items = (data.elements ?? []).map(normaliseOsm).filter((item): item is Activity => item !== null);
   return remember(key, items, 20 * 60000);
 }
@@ -74,10 +92,8 @@ export async function getOsm(id: string): Promise<Activity | null> {
   const match = /^osm-(node|way|relation)-(\d+)$/.exec(id);
   if (!match) return null;
   const query = `[out:json][timeout:10];${match[1]}(${match[2]});out center;`;
-  const res = await timedFetch('https://overpass.kumi.systems/api/interpreter', {
-    method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: `data=${encodeURIComponent(query)}`,
-  }, 12000);
-  if (!res.ok) return null;
-  const data = await res.json() as { elements?: OsmElement[] };
-  return data.elements?.[0] ? normaliseOsm(data.elements[0]) : null;
+  try {
+    const data = await queryOverpass(query, 8000);
+    return data.elements?.[0] ? normaliseOsm(data.elements[0]) : null;
+  } catch { return null; }
 }

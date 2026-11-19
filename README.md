@@ -30,7 +30,7 @@ GitHub Actions runs the tests, TypeScript check, lint, production build and a lo
 
 ## Discovery and data quality
 
-- **OpenStreetMap:** live places through Overpass. Entries with unknown opening times are excluded when a time filter needs hours. OSM data is crowdsourced, so the app asks users to verify details.
+- **OpenStreetMap:** live places through public Overpass endpoints with sequential fallback. Entries with unknown opening times are excluded when a time filter needs hours. Public endpoints can rate-limit or fail, and OSM data is crowdsourced, so the app asks users to verify details.
 - **Ticketmaster:** optional live events through the Discovery API. The key stays on the server. Only provider-supplied GBP prices are shown, with a warning that fees and availability can change.
 - **Curated:** `lib/providers/curated.ts` is the place for reviewed real listings. It currently contains **zero** records.
 - **Demonstration:** `lib/providers/demo.ts` contains **12** example activity ideas. These are labelled as examples and never presented as genuine upcoming events or venue bookings.

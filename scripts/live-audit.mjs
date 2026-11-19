@@ -8,7 +8,7 @@ console.log('Counts are request-time matches among up to 250 provider records pe
 for (const category of ['food', 'outdoor']) {
   const result = await discover({ ...DEFAULT_FILTERS, category, demo: false });
   const providerFailed = result.warnings.some(warning => warning.includes('OpenStreetMap'));
-  console.log(`${category}: ${providerFailed ? 'unavailable' : result.count} eligible places`);
+  console.log(providerFailed ? `${category}: provider unavailable` : `${category}: ${result.count} eligible places`);
   for (const warning of result.warnings) console.log(`  Provider note: ${warning}`);
   await delay(1600); // Respect the per-instance Overpass request interval.
 }
