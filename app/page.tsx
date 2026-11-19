@@ -74,7 +74,12 @@ export default function Home() {
       const data = await response.json() as DiscoveryResult & { error?: string };
       if (!response.ok) throw new Error(data.error || 'Search failed.');
       setWarnings(data.warnings);
-      if (!data.activities.length) { setMessage('No matching activities. Try a wider radius, any budget, another time, or labelled demo ideas.'); return; }
+      if (!data.activities.length) {
+        setMessage(data.warnings.some(warning => warning.startsWith('OpenStreetMap') || warning.startsWith('Ticketmaster'))
+          ? 'Live places could not load right now. You can still try clearly labelled demonstration ideas.'
+          : 'No matching activities. Try a wider radius, any budget, another time, or labelled demo ideas.');
+        return;
+      }
       let seen: string[] = [];
       try { seen = JSON.parse(sessionStorage.getItem(SEEN_KEY) || '[]') as string[]; } catch { /* New session. */ }
       let fresh = data.activities.filter(item => !seen.includes(item.id));
@@ -109,7 +114,7 @@ export default function Home() {
         <div className="spin-meta"><span>{remaining} of 3 free spins left today</span><button type="button" onClick={() => { setMuted(!muted); try { localStorage.setItem('localroulette:muted', JSON.stringify(!muted)); } catch { /* Optional. */ } }} aria-label={muted ? 'Turn sound on' : 'Turn sound off'}>{muted ? '♪ Sound off' : '♫ Sound on'}</button></div>
         <small>Resets at UK midnight. Browser limits can be reset or bypassed.</small>{installPrompt && <button type="button" className="install-button" onClick={() => { void installPrompt.prompt(); setInstallPrompt(null); }}>Install LocalRoulette ↗</button>}
       </div></div></section>
-    <div className="container">{message && <div className="notice" role="status">{message}{message.startsWith('No matching') && <button type="button" onClick={() => setFilters(previous => ({ ...previous, radius: 50, budget: 'any', category: 'surprise' }))}>Expand search filters</button>}</div>}
+    <div className="container">{message && <div className="notice" role="status">{message}{message.startsWith('No matching') && <button type="button" onClick={() => setFilters(previous => ({ ...previous, radius: 50, budget: 'any', category: 'surprise' }))}>Expand search filters</button>}{message.startsWith('Live places') && <button type="button" onClick={() => setFilters(previous => ({ ...previous, demo: true }))}>Try demo ideas</button>}</div>}
       {warnings.length > 0 && <div className="provider-note" role="status">{warnings.join(' ')}</div>}
       {result && <section className="reveal" ref={resultRef} aria-live="polite"><span className="eyebrow">03 / THE WHEEL HAS SPOKEN</span><h2>Your next adventure: <em>{result.name}</em></h2>
         <div className="reveal-grid"><ActivityCard item={result} saved={isSaved(result.id)} onSave={toggle}/><div className="reveal-copy"><p>{result.description}</p><div className="detail-pills"><span>⌖ {result.town}{result.distanceMiles !== undefined ? ` · ${result.distanceMiles} mi` : ''}</span><span>{priceLabel(result)}</span><span>◷ {whenLabel(result)}</span></div>
